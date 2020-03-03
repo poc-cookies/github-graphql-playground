@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"html"
 	"os"
 
 	"github.com/shurcooL/githubv4"
@@ -52,6 +53,29 @@ func fetchIssueId(client *githubv4.Client, ctx context.Context, issueNumber int,
 	return q.Repository.Issue.Id, err
 }
 
+func createNewIssue(client *githubv4.Client, ctx context.Context, repoId, issueTitle, issueBody string) error {
+	fmt.Println("creating a new issue...")
+	var mm struct {
+		CreateIssue struct {
+			Issue struct {
+				Repository struct {
+					ID githubv4.ID
+				}
+				Title githubv4.String // Not necessary
+				Body  githubv4.String // Not necessary
+			}
+		} `graphql:"createIssue(input: $input)"`
+	}
+	input := githubv4.CreateIssueInput{
+		RepositoryID: githubv4.String(repoId),
+		Title:        githubv4.String(issueTitle),
+		Body:         githubv4.NewString(githubv4.String(issueBody)),
+	}
+
+	err := client.Mutate(ctx, &mm, input, nil)
+	return err
+}
+
 func main() {
 	fmt.Println("Hello, world.")
 
@@ -88,6 +112,15 @@ func main() {
 		fmt.Println("ERROR 3:", err3)
 	}
 	fmt.Println(issueId)
+
+	// Create Issue (mutation)
+	repoId := "MDEwOlJlcG9zaXRvcnkxNzE0MzcxNzk="
+	issueTitle := "Test GQL GO 1"
+	issueBody := html.EscapeString(`"Foo's Bar" <foobar@example.com>`)
+	err4 := createNewIssue(client, context.Background(), repoId, issueTitle, issueBody)
+	if err4 != nil {
+		fmt.Println("Error 4:", err4)
+	}
 
 	fmt.Println("The END.")
 }
