@@ -33,6 +33,25 @@ func fetchRepoDescription(client *githubv4.Client, ctx context.Context, owner, n
 	return q.Repository.Description, err
 }
 
+func fetchIssueId(client *githubv4.Client, ctx context.Context, issueNumber int, owner, name string) (string, error) {
+	var q struct {
+		Repository struct {
+			Issue struct {
+				Id string
+			} `graphql:"issue(number: $issueNumber)"`
+		} `graphql:"repository(owner: $owner, name: $name)"`
+	}
+
+	variables := map[string]interface{}{
+		"owner":       githubv4.String(owner),
+		"name":        githubv4.String(name),
+		"issueNumber": githubv4.Int(issueNumber),
+	}
+
+	err := client.Query(ctx, &q, variables)
+	return q.Repository.Issue.Id, err
+}
+
 func main() {
 	fmt.Println("Hello, world.")
 
@@ -61,6 +80,14 @@ func main() {
 		fmt.Println("ERROR 2:", err2)
 	}
 	fmt.Println(repoDescription)
+
+	// Issue ID
+	issueNumber := 1
+	issueId, err3 := fetchIssueId(client, context.Background(), issueNumber, repoOwner, repoName)
+	if err3 != nil {
+		fmt.Println("ERROR 3:", err3)
+	}
+	fmt.Println(issueId)
 
 	fmt.Println("The END.")
 }
